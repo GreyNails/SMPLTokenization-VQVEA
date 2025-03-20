@@ -209,6 +209,7 @@ class VanillaTokenizer(nn.Module):
         self.token_size_div = arch_params.TOKEN_SIZE_DIV
         self.input_joint_dim = input_joint_dim
         self.num_tokens = (((self.num_joints//10)*10) * (2**(self.token_size_mul)) / (2**self.down_t))
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.encoder = PoseSPEncoderV1(rot_type=self.rot_type,
                                        input_dim=input_joint_dim,
                                        output_emb_width=self.code_dim,
@@ -217,7 +218,8 @@ class VanillaTokenizer(nn.Module):
                                        depth=self.depth,
                                        width=self.width,
                                        dilation_growth_rate=self.dilation_growth_rate,
-                                       add_noise=add_noise)
+                                       add_noise=add_noise).to(self.device)
+        
         self.decoder = PoseSPDecoderV1(rot_type=self.rot_type,
                                        output_dim=output_joint_dim,
                                        output_emb_width=self.code_dim,
@@ -228,8 +230,11 @@ class VanillaTokenizer(nn.Module):
                                        num_tokens=self.num_tokens,
                                        dilation_growth_rate=self.dilation_growth_rate,
                                        num_joints=arch_params.NB_JOINTS,
-                                       mesh_inference=mesh_inference)
-        self.quantizer = QuantizeEMAReset(self.num_code, self.code_dim)
+                                       mesh_inference=mesh_inference).to(self.device)
+        
+        self.quantizer = QuantizeEMAReset(self.num_code, self.code_dim).to(self.device)
+
+
 
     def encode(self, x):
         batch_size, num_joints, rot_dim = x.shape[:3]
@@ -246,10 +251,10 @@ class VanillaTokenizer(nn.Module):
         batch_size, num_joints, rot_dim = x.shape[:3]
         if rot_dim == 3 and self.input_joint_dim == 6:
             x = matrix_to_rotation_6d(x)
-        # Encode
-        x_encoder = self.encoder(x, global_step)
+        # Encode x torch.Size([16, 24, 6])
+        x_encoder = self.encoder(x, global_step) #torch.Size([16, 256, 160])
         ## quantization
-        x_quantized, loss, perplexity  = self.quantizer(x_encoder)
+        x_quantized, loss, perplexity  = self.quantizer(x_encoder) #torch.Size([16, 256, 160])
         ## decoder
         x_decoder = self.decoder(x_quantized)
         return x_decoder, loss, perplexity
@@ -276,6 +281,8 @@ class DecodeTokens(nn.Module):
         token_size_div = arch.TOKEN_SIZE_DIV
         token_size_mul = arch.TOKEN_SIZE_MUL
         num_tokens = (((num_joints//10)*10) * (2**(token_size_mul)) / (2**down_t))
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         self.decoder = PoseSPDecoderV1(rot_type=rot_type,
                                        output_dim=6,
@@ -287,14 +294,17 @@ class DecodeTokens(nn.Module):
                                        num_tokens=num_tokens,
                                        dilation_growth_rate=dilation_growth_rate,
                                        num_joints=num_joints,
-                                       mesh_inference=mesh_inference)
-        self.quantizer = QuantizeEMAReset(nb_code, code_dim)
+                                       mesh_inference=mesh_inference).to(self.device)
+    
+        self.quantizer = QuantizeEMAReset(nb_code, code_dim).to(self.device)
         self.load_weights(ckpt)
 
-    def forward(self, logits):
-        decode_feat = self.quantizer.dequantize_logits(logits)
-        pose_out = self.decoder(decode_feat.permute(0,2,1))
-        return pose_out['pred_pose_body_6d']
+    def forward(self, code_idx,N=16,T=160):
+        x_d=self.quantizer.dequantize(code_idx)
+        # decode_feat = self.quantizer.dequantize_logits(logits) #概率量化
+        x_d = x_d.view(N, T, -1).permute(0, 2, 1).contiguous()
+        pose_out = self.decoder(x_d)
+        return pose_out['pred_pose_body_rotmat']  #torch.Size([16, 24, 3, 3])
 
     def load_weights(self, ckpt):
         prepare_statedict(self.decoder, ckpt['net'], 'decoder', 'body_model')
@@ -318,6 +328,8 @@ class EncodeTokens(nn.Module):
         depth = arch.DEPTH
         dilation_growth_rate = arch.DILATION_RATE
         token_size_mul = arch.TOKEN_SIZE_MUL
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         self.encoder = PoseSPEncoderV1(rot_type=rot_type,
                                        input_dim=6,
@@ -326,17 +338,19 @@ class EncodeTokens(nn.Module):
                                        width=width,
                                        depth=depth,
                                        token_size_mul=token_size_mul,
-                                       dilation_growth_rate=dilation_growth_rate)
-        self.quantizer = QuantizeEMAReset(nb_code, code_dim)
+                                       dilation_growth_rate=dilation_growth_rate).to(self.device)
+        self.quantizer = QuantizeEMAReset(nb_code, code_dim).to(self.device)
 
         self.load_weights(ckpt)
 
     def forward(self, x):
-        # Encoder
-        x_encoder = self.encoder(x)
 
+        # Encoder
+        x = matrix_to_rotation_6d(x)  #torch.Size([16, 24, 6])
+        x_encoder = self.encoder(x) #torch.Size([16, 256, 160])
+        
         # Quantize
-        x_encoder = self.quantizer.preprocess(x_encoder)
+        x_encoder = self.quantizer.preprocess(x_encoder) #torch.Size([2560, 256])
         code_idx = self.quantizer.quantize(x_encoder)
 
         return code_idx

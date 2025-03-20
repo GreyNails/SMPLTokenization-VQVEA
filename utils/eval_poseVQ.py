@@ -78,8 +78,13 @@ def eval_pose_vqvae(hparams, val_loader, net, logger, writer, nb_iter, out_dir, 
 
     err_list = reset_err_list('val')
     dataset_name = ''
+    total_batches = 1
+
 
     for batch_idx, batch in enumerate(tqdm.tqdm(val_loader)):
+        
+
+        total_batches=batch_idx
         gt_pose = batch['gt_pose_body'].cuda().float() # (bs, 63)
         gt_mesh = batch['body_vertices'].cuda().float() # (bs, 10743)
         gt_jnts = batch['body_joints'].cuda().float()
@@ -108,7 +113,7 @@ def eval_pose_vqvae(hparams, val_loader, net, logger, writer, nb_iter, out_dir, 
             pkl.dump(results, handle, protocol=pkl.HIGHEST_PROTOCOL)
     
     for key, value in err_list.items():
-        err_list[key] /= batch_idx
+        err_list[key] /= total_batches
 
     err_list['val/curr_jnt_recons'] *= 1000
     err_list['val/curr_mesh_recons'] *= 1000
@@ -137,7 +142,7 @@ def eval_pose_vqvae(hparams, val_loader, net, logger, writer, nb_iter, out_dir, 
         for key, value in err_list.items():
             writer.add_scalar(f'{key}', err_list[key], nb_iter)
         for key, value in best_scores.items():
-            writer.add_scalar(f'{key}', err_list[key], nb_iter)
+            writer.add_scalar(f'{key}', best_scores[key], nb_iter)
 
     net.eval()
 

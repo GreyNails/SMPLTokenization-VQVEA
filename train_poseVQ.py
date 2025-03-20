@@ -15,6 +15,7 @@ import utils.utils_model as utils_model
 # from utils.pose_visualize import visualize_from_mesh
 from utils.eval_poseVQ import eval_pose_vqvae, reset_err_list, init_best_scores, set_random_seed, get_loggers
 from options.option_posevq import run_grid_search_experiments
+from models.vanilla_pose_vqvae import EncodeTokens,DecodeTokens
 
 def update_lr_warm_up(optimizer, nb_iter, warm_up_iter, lr):
 
@@ -59,7 +60,7 @@ def main(hparams):
         best_scores = init_best_scores()
         writer = get_loggers(hparams)
         logger.info('EVAL-ONLY: loading checkpoint from {}'.format(hparams.EXP.RESUME_PTH))
-        ckpt_file = f'{hparams.EXP.RESUME_PTH}/best_net.pth' if isdir(hparams.EXP.RESUME_PTH) else hparams.EXP.RESUME_PTH
+        ckpt_file = f'{hparams.EXP.RESUME_PTH}/best_net_test.pth' if isdir(hparams.EXP.RESUME_PTH) else hparams.EXP.RESUME_PTH
         ckpt = torch.load(ckpt_file, map_location='cpu')
         pretrained_hparams = ckpt['hparams']
         net = get_model(pretrained_hparams)
@@ -67,6 +68,30 @@ def main(hparams):
         net.cuda()
         eval_pose_vqvae(hparams, eval_loader, net, logger, writer, 0, hparams.EXP.OUT_DIR, hparams.EXP.VAL_DISP_ITER, best_scores)
         exit()
+
+
+    test_only=True
+    if test_only:
+        model_path='/home/usr/dell/Human_centric/TokenHMR/tokenization/output/test_model/best_net.pth'
+        net_en=EncodeTokens(model_path)
+        net_de=DecodeTokens(model_path)
+
+
+        for batch_idx, batch in enumerate(tqdm.tqdm(val_loader)):
+             device = torch.device("cuda:0")
+             gt_pose = batch['gt_pose_body'].float().to(device) 
+             code_idx=net_en(gt_pose)
+             print(code_idx.size())
+             pre_6d=net_de(code_idx)
+             print(pre_6d.size())
+
+
+
+
+
+        eval_pose_vqvae(hparams, eval_loader, net, logger, writer, 0, hparams.EXP.OUT_DIR, hparams.EXP.VAL_DISP_ITER, best_scores)
+        exit()
+
 
     ##### ------ resume training ------- #####
     if hparams.EXP.RESUME_TRAINING:
