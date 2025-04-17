@@ -205,7 +205,7 @@ class VanillaTokenizer(nn.Module):
         self.quant = arch_params.QUANTIZER
         self.rot_type = arch_params.ROT_TYPE
         self.dilation_growth_rate = arch_params.DILATION_RATE
-        self.token_size_mul = arch_params.TOKEN_SIZE_MUL 
+        self.token_size_mul = arch_params.TOKEN_SIZE_MUL   #4
         self.token_size_div = arch_params.TOKEN_SIZE_DIV
         self.input_joint_dim = input_joint_dim
         self.num_tokens = (((self.num_joints//10)*10) * (2**(self.token_size_mul)) / (2**self.down_t))
@@ -252,7 +252,7 @@ class VanillaTokenizer(nn.Module):
         if rot_dim == 3 and self.input_joint_dim == 6:
             x = matrix_to_rotation_6d(x)
         # Encode x torch.Size([16, 24, 6])
-        x_encoder = self.encoder(x, global_step) #torch.Size([16, 256, 160])
+        x_encoder = self.encoder(x, global_step) #torch.Size([16, 256, 160])->torch.Size([256, 256, 40])
         ## quantization
         x_quantized, loss, perplexity  = self.quantizer(x_encoder) #torch.Size([16, 256, 160])
         ## decoder

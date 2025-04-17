@@ -1,0 +1,63 @@
+ARCH:
+  BETA: 1.0
+  CB_SCALE_DOWN: 2
+  CODE_DIM: 256
+  DEPTH: 2
+  DILATION_RATE: 3
+  DOWN_T: 1
+  MODEL_NAME: vanilla
+  NB_CODE: 2048
+  NB_JOINTS: 24
+  NUM_TOKENS: 10
+  N_DECODER_LAYERS: 2
+  N_ENCODER_LAYERS: 3
+  QUANTIZER: ema_reset
+  ROT_TYPE: rot6d
+  SMPL_TYPE: smpl
+  TOKEN_SIZE_DIV: 4
+  TOKEN_SIZE_MUL: 4
+  WIDTH: 512
+DATA:
+  ADD_NOISE: true
+  BATCH_SIZE: 16
+  DATASET: amass_pose
+  DATA_ROOT: tokenization_data/add_hand_global
+  MASK_BODY_PARTS: false
+  NUM_WORKERS: 6
+  TESTLIST: ACCAD
+  TRAINLIST: ACCAD
+  TRAIN_PART: 0.12_0.11_0.11_0.05_0.05_0.05_0.05_0.05_0.03_0.03_0.03_0.16_0.16
+  VALLIST: ACCAD
+EXP:
+  DEBUG: false
+  EVAL_DS: test
+  EVAL_ITER: 20
+  EVAL_ONLY: false
+  ID: tokenization_amass_moyo_ID00
+  LOG_TB: true
+  NAME: tokenization_amass_moyo
+  NUM_GPUS: 2
+  OUT_DIR: output/tokenization_amass_moyo/tokenization_amass_moyo_ID00_20-03-2025_15-28-55
+  PRINT_ITER: 100
+  RESUME_PTH: ''
+  RESUME_TRAINING: false
+  SEED: 123
+  TR_DISP_ITER: 1000
+  VAL_DISP_ITER: 50
+LOSS:
+  COMMIT_LOSS_WT: 1.0
+  JNT_LOSS: l2
+  JNT_LOSS_WT: 100.0
+  LOSS_WT: 1.0
+  MESH_LOSS: wt_l2
+  MESH_LOSS_WT: 100.0
+  ONLY_VALID_JNT: true
+  POSE_LOSS: l2
+  POSE_LOSS_WT: 20.0
+OPT:
+  GAMMA: 0.05
+  LR: 0.0002
+  LR_SCHEDULER: '75000_100000'
+  TOTAL_ITER: 20
+  WARM_UP_ITER: 2
+  WEIGHT_DECAY: 1.0e-05

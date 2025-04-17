@@ -70,7 +70,7 @@ def main(hparams):
         exit()
 
 
-    test_only=True
+    test_only=False
     if test_only:
         model_path='/home/usr/dell/Human_centric/TokenHMR/tokenization/output/test_model/best_net.pth'
         net_en=EncodeTokens(model_path)
@@ -82,12 +82,8 @@ def main(hparams):
              gt_pose = batch['gt_pose_body'].float().to(device) 
              code_idx=net_en(gt_pose)
              print(code_idx.size())
-             pre_6d=net_de(code_idx)
-             print(pre_6d.size())
-
-
-
-
+             pre_pose=net_de(code_idx)
+             print(pre_pose.size())
 
         eval_pose_vqvae(hparams, eval_loader, net, logger, writer, 0, hparams.EXP.OUT_DIR, hparams.EXP.VAL_DISP_ITER, best_scores)
         exit()

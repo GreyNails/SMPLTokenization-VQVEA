@@ -69,7 +69,7 @@ class MixedTrainDataset(data.Dataset):
         return self.length
 
 class VQPoseDataset(data.Dataset):
-    def __init__(self, dt, split= 'train', data_root='', rot_type = 'rotmat', smpl_type= 'smplx', mask_body_parts = False, debug = False):
+    def __init__(self, dt, split= 'train', data_root='', rot_type = 'rotmat', smpl_type= 'smpl', mask_body_parts = False, debug = False):
 
         self.data_root = pjoin(data_root, smpl_type, split)
         self.joints_num = 24
@@ -122,7 +122,7 @@ class VQPoseDataset(data.Dataset):
         return item
 
 class ValDataset(data.Dataset):
-    def __init__(self, dataset_list, split= 'val', data_root='', rot_type = 'rotmat', smpl_type = 'smplx', debug = False):
+    def __init__(self, dataset_list, split= 'val', data_root='', rot_type = 'rotmat', smpl_type = 'smpl', debug = False):
 
         self.data_root = pjoin(data_root, smpl_type, split)
         self.joints_num = 24
