@@ -69,16 +69,37 @@ class MixedTrainDataset(data.Dataset):
         return self.length
 
 class VQPoseDataset(data.Dataset):
-    def __init__(self, dt, split= 'train', data_root='', rot_type = 'rotmat', smpl_type= 'smpl', mask_body_parts = False, debug = False):
-
+    def __init__(self, dt, split= 'train', data_root='', rot_type = 'rotmat', smpl_type= 'smplh', mask_body_parts = False, debug = False):
+        ##joints change
         self.data_root = pjoin(data_root, smpl_type, split)
-        self.joints_num = 24
+        self.joints_num = 52 ##joints change
         self.smplx_body_parts = get_smplx_body_parts()
         self.mask_body_parts = mask_body_parts
         self.split = split
         self.smpl_type = smpl_type
 
-        self.smpl_model = eval(f'{smpl_type.upper()}')(f'../data/body_models/{smpl_type}', num_betas=10, ext='pkl')
+        self.smpl_model = eval(f'{smpl_type.upper()}')(f'../data/body_models/{smpl_type}', 
+        num_betas=10,
+        ext='pkl',
+        use_pca=False,  # 不使用PCA，直接使用45维手部参数
+        flat_hand_mean=False,
+        create_global_orient=True,
+        create_body_pose=True,
+        create_left_hand_pose=True,
+        create_right_hand_pose=True,
+        create_transl=True)
+
+        # self.smpl_model = eval(f'{smpl_type.upper()}')(f'../data/body_models/{smpl_type}', 
+        # num_betas=10,
+        # ext='pkl')
+        # # use_pca=False,  # 不使用PCA，直接使用45维手部参数
+        # # flat_hand_mean=False,
+        # # create_global_orient=True,
+        # # create_body_pose=True,
+        # # create_left_hand_pose=True,
+        # # create_right_hand_pose=True,
+        # # create_transl=True)
+
         data = np.load(pjoin(self.data_root, f'{split}_{dt}.npz'))  #(211512, 63)  data['pose_body'].shape[1]
         total_samples = data['pose_body'].shape[0]
         
@@ -108,10 +129,23 @@ class VQPoseDataset(data.Dataset):
         pose_body_aa = torch.Tensor(pose_body_aa.reshape(-1)).float()
         item['pose_body_aa'] = pose_body_aa.clone()
 
-        global_body=pose_body_aa[69:]
-        pose_body_nog=pose_body_aa[:69]
-        body_model = self.smpl_model(body_pose=pose_body_nog.view(-1, pose_body_nog.shape[0]),global_orient=global_body.view(-1, global_body.shape[0]))
+        # global_body=pose_body_aa[153:] ##joints change
+        # pose_body_nog=pose_body_aa[:153] ##joints change
+        # body_model = self.smpl_model(body_pose=pose_body_nog.view(-1, pose_body_nog.shape[0]),global_orient=global_body.view(-1, global_body.shape[0]))
+                # 动态分割：最后3个值是global_orient，其余是body_pose
+        global_body = pose_body_aa[-3:]  # 最后3个值
+        pose_body_nog = pose_body_aa[:63]  # 除了最后3个值的所有值
+        left_hand_pose=pose_body_aa[63:63+45]
+        right_hand_pose=pose_body_aa[63+45:-3]
+
         
+        body_model = self.smpl_model(
+            body_pose=pose_body_nog.view(1, -1),  # 改为(1, -1)让其自动推断维度
+            global_orient=global_body.view(1, 3),  # global_orient始终是3维
+            left_hand_pose=left_hand_pose.view(1, -1),
+            right_hand_pose=right_hand_pose.view(1, -1)
+        )
+
         item['body_vertices'] = body_model.vertices[0].detach().float()
         item['body_joints'] = body_model.joints[0].detach().float()  #torch.Size([45, 3])
 
@@ -122,17 +156,27 @@ class VQPoseDataset(data.Dataset):
         return item
 
 class ValDataset(data.Dataset):
-    def __init__(self, dataset_list, split= 'val', data_root='', rot_type = 'rotmat', smpl_type = 'smpl', debug = False):
-
+    def __init__(self, dataset_list, split= 'val', data_root='', rot_type = 'rotmat', smpl_type = 'smplh', debug = False):
+        ##joints change
         self.data_root = pjoin(data_root, smpl_type, split)
-        self.joints_num = 24
+        self.joints_num = 52 ##joints change
         self.smplx_body_parts = get_smplx_body_parts()
         self.split = split
         self.smpl_type = smpl_type
 
-        self.smpl_model = eval(f'{smpl_type.upper()}')(f'../data/body_models/{smpl_type}', num_betas=10, ext='pkl')
+        # self.smpl_model = eval(f'{smpl_type.upper()}')(f'../data/body_models/{smpl_type}', num_betas=10, ext='pkl')
+        self.smpl_model = eval(f'{smpl_type.upper()}')(f'../data/body_models/{smpl_type}', 
+        num_betas=10,
+        ext='pkl',
+        use_pca=False,  # 不使用PCA，直接使用45维手部参数
+        flat_hand_mean=False,
+        create_global_orient=True,
+        create_body_pose=True,
+        create_left_hand_pose=True,
+        create_right_hand_pose=True,
+        create_transl=True)
         
-        self.pose_body = np.empty((0,72))
+        self.pose_body = np.empty((0,156)) ##joints change
         self.betas = np.empty((0,10))
         self.gender = np.empty((0), dtype=str)
         self.name = np.empty((0), dtype=str) 
@@ -170,10 +214,32 @@ class ValDataset(data.Dataset):
         pose_body_aa = torch.Tensor(pose_body_aa.reshape(-1)).float()
         item['pose_body_aa'] = pose_body_aa.clone()
 
-        global_body=pose_body_aa[69:]
-        pose_body_nog=pose_body_aa[:69]
-        body_model = self.smpl_model(body_pose=pose_body_nog.view(-1, pose_body_nog.shape[0]),global_orient=global_body.view(-1, global_body.shape[0]))
+        # global_body=pose_body_aa[153:] ##joints change
+        # pose_body_nog=pose_body_aa[:153] ##joints change
+        # body_model = self.smpl_model(body_pose=pose_body_nog.view(-1, pose_body_nog.shape[0]),global_orient=global_body.view(-1, global_body.shape[0]))
 
+
+        # global_body = pose_body_aa[-3:]  # 最后3个值
+        # pose_body_nog = pose_body_aa[:-3]  # 除了最后3个值的所有值
+        
+        # body_model = self.smpl_model(
+        #     body_pose=pose_body_nog.view(1, -1),  # 改为(1, -1)让其自动推断维度
+        #     global_orient=global_body.view(1, 3)  # global_orient始终是3维
+        # )
+        # print(pose_body_aa.shape)
+        global_body = pose_body_aa[-3:]  # 最后3个值
+        pose_body_nog = pose_body_aa[:63]  # 除了最后3个值的所有值
+        left_hand_pose=pose_body_aa[63:63+45]
+        right_hand_pose=pose_body_aa[63+45:-3]
+
+        
+        body_model = self.smpl_model(
+            body_pose=pose_body_nog.view(1, -1),  # 改为(1, -1)让其自动推断维度
+            global_orient=global_body.view(1, 3),  # global_orient始终是3维
+            left_hand_pose=left_hand_pose.view(1, -1),
+            right_hand_pose=right_hand_pose.view(1, -1)
+        )
+        
         item['body_vertices'] = body_model.vertices[0].detach().float()
         item['body_joints'] = body_model.joints[0].detach().float()
 

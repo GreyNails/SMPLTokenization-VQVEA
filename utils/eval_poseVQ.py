@@ -51,11 +51,11 @@ def calculate_mesh_reconstruction_error(gt_mesh, pred_mesh):
     return torch.sqrt(torch.pow(gt_mesh-pred_mesh, 2).sum(-1)).mean()
 
 def calculate_jnts_reconstruction_error(gt_jnts, pred_jnts):
-    valid_joints = [*range(1,22)] # only body joints
+    valid_joints = [*range(1,22+30)] # only body joints
     return torch.sqrt(torch.pow(gt_jnts[:,valid_joints]-pred_jnts[:,valid_joints], 2).sum(-1)).mean()
 
 def save_results_func(batch, output, results):
-    valid_joints = [*range(1,22)]
+    valid_joints = [*range(1,22+30)]
     save_aa_gt = batch['pose_body_aa'].numpy()
     save_jnts_gt = batch['body_joints'][:,valid_joints].numpy()
     save_aa_pred = output['pred_pose_body_aa'].detach().cpu().numpy()

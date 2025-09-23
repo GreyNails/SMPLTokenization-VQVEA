@@ -1,3 +1,6 @@
+
+
+
 import re
 import torch
 import numpy as np
@@ -9,11 +12,25 @@ from .quantize_cnn import QuantizeEMAReset
 from .rotation_utils import matrix_to_rotation_6d, rotation_6d_to_matrix, matrix_to_axis_angle
 from smplx import SMPLHLayer, SMPLXLayer,SMPLLayer
 
-smpl_type='smpl'
+smpl_type='smplh'
 import os
 current_dir = os.path.dirname(os.path.realpath(__file__))
 body_model_path = os.path.join(current_dir, '..', '..', 'data/body_models', smpl_type)
-body_model = eval(f'{smpl_type.upper()}Layer')(body_model_path, num_betas=10, ext='pkl')
+
+
+body_model = eval(f'{smpl_type.upper()}Layer')(body_model_path, num_betas=10, use_pca=False, ext='pkl')
+# body_model = eval(f'{smpl_type.upper()}Layer')(f'../data/body_models/{smpl_type}', 
+# num_betas=10,
+# ext='pkl',
+# use_pca=False,  # 不使用PCA，直接使用45维手部参数
+# flat_hand_mean=False,
+# create_global_orient=True,
+# create_body_pose=True,
+# create_left_hand_pose=True,
+# create_right_hand_pose=True,
+# create_transl=True)
+
+
 body_model = body_model.cuda() if torch.cuda.is_available() else body_model
 
 def step_multiplier_mapping():
@@ -55,7 +72,7 @@ class PoseSPEncoderV1(nn.Module):
         super(PoseSPEncoderV1, self).__init__()
 
         encoder_layers = []
-        num_joints = 24
+        num_joints = 52  ##joints change
         filter_t, pad_t = stride_t * 2, stride_t // 2
         self.inp_preprocess = inp_preprocess
         self.add_noise = add_noise
@@ -120,7 +137,7 @@ class PoseSPDecoderV1(nn.Module):
                  token_size_div = 1,
                  num_tokens = 10,
                  dilation_growth_rate = 3,
-                 num_joints=24,
+                 num_joints=52,##joints change
                  output_dim = 6,
                  mesh_inference = True,
                  out_postprocess = True):
@@ -181,7 +198,10 @@ class PoseSPDecoderV1(nn.Module):
         
         if self.mesh_inference:
             pred_pose_aa = matrix_to_axis_angle(pred_pose_rotmat.view(-1, 3, 3)).view(batch_size, 3*self.num_joints)
-            pred_body_mesh = body_model(body_pose=pred_pose_rotmat[:, :23, :, :],global_orient=pred_pose_rotmat[:, 23, :, :])
+            pred_body_mesh = body_model(body_pose=pred_pose_rotmat[:, :21, :, :],
+                                        left_hand_pose=pred_pose_rotmat[:, 21:21+15, :, :],
+                                        right_hand_pose=pred_pose_rotmat[:, 21+15:21+15+15, :, :],
+                                        global_orient=pred_pose_rotmat[:, -1, :, :])
 
             output.update({
                 'pred_pose_body_aa': pred_pose_aa,
@@ -196,7 +216,7 @@ class VanillaTokenizer(nn.Module):
     def __init__(self, arch_params=None, input_joint_dim=6, output_joint_dim=6, mesh_inference=True, add_noise=False):
         
         super().__init__()
-        self.num_joints = 24
+        self.num_joints = 52 ##joints change
         self.code_dim = arch_params.CODE_DIM
         self.num_code = arch_params.NB_CODE
         self.down_t = arch_params.DOWN_T
@@ -266,7 +286,7 @@ class DecodeTokens(nn.Module):
                  mesh_inference = False):
         super(DecodeTokens, self).__init__()
         
-        num_joints = 24
+        num_joints = 52 ##joints change
         ckpt = torch.load(ckpt_path, map_location='cpu')
         pretrained_hparams = ckpt['hparams']
         arch = pretrained_hparams.ARCH

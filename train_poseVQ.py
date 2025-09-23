@@ -214,7 +214,7 @@ def main(hparams):
         if nb_iter % hparams.EXP.EVAL_ITER == 0:
             best_scores = eval_pose_vqvae(hparams, val_loader, net, logger, writer, nb_iter, hparams.EXP.OUT_DIR, hparams.EXP.VAL_DISP_ITER, best_scores)
             
-
+ 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()

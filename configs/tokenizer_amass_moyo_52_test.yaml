@@ -2,9 +2,9 @@ EXP:
   NAME: 'tokenization_amass_moyo'
   OUT_DIR: 'output'
   DEBUG: False
-  PRINT_ITER: 100
-  EVAL_ITER: 2500
-  TR_DISP_ITER: 1000
+  PRINT_ITER: 10
+  EVAL_ITER: 2
+  TR_DISP_ITER: 10
   VAL_DISP_ITER: 50
   EVAL_ONLY: False
   EVAL_DS: 'test'
@@ -12,12 +12,12 @@ EXP:
   RESUME_TRAINING: False
   LOG_TB: True
 DATA:
-  DATA_ROOT: '/storage/smpl_mass/processed'
+  DATA_ROOT: '/storage/smpl_mass/processed_52_test'
   DATASET: 'amass_pose'
-  TRAINLIST: 'CMU_KIT_BMLrub_DanceDB_BMLmovi_EyesJapan_TotalCapture_EKUT_ACCAD_TCDHands_MOYO'
+  TRAINLIST: 'CMU'
   TRAIN_PART: '0.12_0.24_0.11_0.05_0.05_0.05_0.05_0.03_0.11_0.03_0.16'
-  VALLIST: 'HumanEva_HDM05_SFU_MOYO'
-  TESTLIST: 'Transitions_SSM'
+  VALLIST: 'HumanEva'
+  TESTLIST: 'Transitions'
   ADD_NOISE: True
   BATCH_SIZE: 256
   MASK_BODY_PARTS: False
@@ -44,7 +44,7 @@ ARCH:
   NB_CODE: [64]
   ROT_TYPE: 'rot6d'
   QUANTIZER: 'ema_reset'
-  SMPL_TYPE: 'smpl'
+  SMPL_TYPE: 'smplh'
   DOWN_T: 1
   WIDTH: 512
   DEPTH: 2

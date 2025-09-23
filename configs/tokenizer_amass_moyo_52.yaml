@@ -3,7 +3,7 @@ EXP:
   OUT_DIR: 'output'
   DEBUG: False
   PRINT_ITER: 100
-  EVAL_ITER: 2500
+  EVAL_ITER: 2500 
   TR_DISP_ITER: 1000
   VAL_DISP_ITER: 50
   EVAL_ONLY: False
@@ -12,7 +12,7 @@ EXP:
   RESUME_TRAINING: False
   LOG_TB: True
 DATA:
-  DATA_ROOT: '/storage/smpl_mass/processed'
+  DATA_ROOT: '/storage/smpl_mass/processed_52'
   DATASET: 'amass_pose'
   TRAINLIST: 'CMU_KIT_BMLrub_DanceDB_BMLmovi_EyesJapan_TotalCapture_EKUT_ACCAD_TCDHands_MOYO'
   TRAIN_PART: '0.12_0.24_0.11_0.05_0.05_0.05_0.05_0.03_0.11_0.03_0.16'
@@ -44,7 +44,7 @@ ARCH:
   NB_CODE: [64]
   ROT_TYPE: 'rot6d'
   QUANTIZER: 'ema_reset'
-  SMPL_TYPE: 'smpl'
+  SMPL_TYPE: 'smplh'
   DOWN_T: 1
   WIDTH: 512
   DEPTH: 2
